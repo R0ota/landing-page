@@ -1,146 +1,147 @@
 /**
- *
+ * 
  * Manipulating the DOM exercise.
  * Exercise programmatically builds navigation,
  * scrolls to anchors from navigation,
  * and highlights section in viewport upon scrolling.
- *
+ * 
  * Dependencies: None
- *
+ * 
  * JS Version: ES2015/ES6
- *
+ * 
  * JS Standard: ESlint
- *
- */
+ * 
+*/
+
+/**
+ * Comments should be present at the beginning of each procedure and class.
+ * Great to have comments before crucial code sections within the procedure.
+*/
 
 /**
  * Define Global Variables
- *
- */
- const mybutton = document.getElementById('myBtn');
- const sectionsElements = document.querySelectorAll('section');
- const navbarUl = document.getElementById('navbar__list');
- // change title's text
- const title = document.getElementById('landing-title');
- 
- let navList = '';
- title.textContent = `Udactiy's Project`;
- /**
-  * End Global Variables
-  * Start Helper Functions
-  
-  *
-  */
- // Generate navbar from sections id names we got from the querySelectorAll
- function gernerateNavbar() {
-   sectionsElements.forEach((section) => {
-     // add html tags for list items
-     // dataset.nav returns DOMStringMap {nav: section 1}
-     navList += `<li> <a class="nav__link menu__link" href="#${section.id}" id="navli">
-           ${section.dataset.nav}</a></li>`;
-   });
-   // add the tags to the inner htmls
-   navbarUl.innerHTML = navList;
- }
- gernerateNavbar();
- 
- // Add class 'active' to section when near top of viewport (Eye level )
- 
- function addActiveClass(section) {
-   // get the id from the section
-   const id = section.getAttribute('id');
- 
-   // add the active class to the section
-   document.querySelector(`#${id}`).classList.add('your-active-class');
- }
- 
- //Removing the active class from the section
- function removeActiveClass(section) {
-   const id = section.getAttribute('id');
-   document.querySelector(`#${id}`).classList.remove('your-active-class');
- }
- 
- // calcualting when the section is active
- function makeActiveSection() {
-   sectionsElements.forEach((section) => {
-     // https://developer.mozilla.org/en-US/docs/Web/API/Element/getBoundingClientRect
-     // DOMRect object providing information about the size of an element and its position relative to the viewport.
-     // viewport : A viewport represents a polygonal (normally rectangular) area in computer graphics that is currently being viewed.
- 
-     let elementOffset = section.getBoundingClientRect();
-     if (elementOffset.top <= 150 && elementOffset.bottom >= 150) {
-       addActiveClass(section);
-     } else {
-       removeActiveClass(section);
-     }
-   });
- }
- // event listener to the dom itself so
- document.addEventListener('scroll', makeActiveSection);
- 
- // get a button to scroll back to top of the page
- //https://www.w3schools.com/howto/howto_js_scroll_to_top.asp
- // When the user scrolls down 20px from the top of the document, show the button
- window.onscroll = function () {
-   scrollFunction();
- };
- 
- function scrollFunction() {
-   if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
-     mybutton.style.display = 'block';
-   } else {
-     mybutton.style.display = 'none';
-   }
- }
- 
- // When the user clicks on the button, scroll to the top of the document
- function topFunction() {
-   document.body.scrollTop = 0; // For Safari
-   document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
- }
- 
- mybutton.addEventListener('click', topFunction);
- 
- let navbar = document.getElementById('navbar').querySelectorAll('li');
- 
- // itrate in li items list
- navbar.forEach((item) => {
-   item.addEventListener('click', function (e) {
-     navbar.forEach((item) => {
-       // remove every navbarclick class added befoe in any list item
-       item.classList.remove('navbarclick');
-     });
-     // add the class on the button
-     item.classList.add('navbarclick');
-   });
- });
- 
- // lis.forEach((li) => {
- //   li.addEventListener('mouseover', function (e) {
- //     li.classList.add('navbarclick');
- //     console.log(li.innerHTML);
- //   });
- // });
- /**
-  * End Helper Functions
-  * Begin Main Functions
-  *
-  */
- 
- // build the nav
- 
- // Add class 'active' to section when near top of viewport
- 
- // Scroll to anchor ID using scrollTO event
- 
- /**
-  * End Main Functions
-  * Begin Events
-  *
-  */
- 
- // Build menu
- 
- // Scroll to section on link click
- 
- // Set sections as active
+ * 
+*/
+
+// Tracks the active section to avoid iterating over entire list of sections
+// and manipulating classes of all
+let activeSection = document.querySelector('.active-section');
+
+// Tracks the active nav button to avoid iterating over entire list of buttons
+// and manipulating classes of all
+let activeNav = document.querySelector('.active-nav');
+
+// Tracks the last Y position of the window, so code can determine if user is
+// scrolling up or down. Program will set ratio of screen coverage needed to // // determine active section based on the direction
+let lastScrollY = 0;
+
+// Holds the list of sections
+const sections = document.querySelectorAll('section');
+
+// Holds the button used to scroll to top
+const goUpButton = document.querySelector('#go-up-button');
+
+
+/**
+ * Function definitions (in order of when they are called in code)
+ * 
+*/
+
+// Assembles and appends the navigation bar, then calls to add the listeners
+function initialSetup() {
+    const navBar = document.querySelector('#navbar__list');
+    const fragment = document.createDocumentFragment();
+    for (const section of sections) {
+        const newNavButton = makeNavButton(section);
+        fragment.appendChild(newNavButton);
+    }
+    navBar.appendChild(fragment);
+    addListeners(navBar);
+}
+
+// Creates a new nav button with classes based on the section parameter, and
+// returns a button
+function makeNavButton(section) {
+    const newNavButton = document.createElement('li');
+    newNavButton.classList.add('menu__link');
+    newNavButton.textContent = section.dataset.nav;
+    newNavButton.setAttribute('data-id', section.id);
+    newNavButton.id = `nav-${section.id}`;
+    if (activeNav == null) {
+        newNavButton.classList.add('active-nav')
+        activeNav = newNavButton;
+    }
+    return newNavButton;
+}
+
+// Adds listeners to 3 places:
+// 1. navigation bar to listen for clicks
+// 2. document to listen for scroll
+// 3. go-up-button to listen for click
+// These are the only 3 listeners the code uses.
+function addListeners(navBar) {
+    navBar.addEventListener('click', onNavClick);
+    document.addEventListener('scroll', function() {scrollCheck()});
+    goUpButton.addEventListener('click', function() {window.scrollTo({top: 0, behavior: 'smooth'})});
+}
+
+// Smoothly scrolls to the appropriate section after click on navigation bar
+function onNavClick(event) {
+    const section = document.querySelector(`#${event.target.dataset.id}`);
+    section.scrollIntoView({behavior: 'smooth'});
+}
+
+// Checks the position of page in the window. Controls visibility of the
+// go-up-button. Checks if user is scrolling up or down, sets the screen
+// coverage ratio accordingly. Uses this ratio to determine which section
+// is active. If active section is different from previous active section
+// in activeSection, then calls functions to set new active section and 
+// navigation button.
+function scrollCheck() {
+    const viewportHeight = window.innerHeight;
+    let ratioForActive;
+    if (window.scrollY > 500) {
+        goUpButton.classList.remove('hide');
+    } else {
+        goUpButton.classList.add('hide');
+    }
+    if (window.scrollY > lastScrollY) {
+        ratioForActive = viewportHeight/3;
+    } else {
+        ratioForActive = viewportHeight*2/3;
+    }
+    lastScrollY = window.scrollY;
+    for (const section of sections) {
+        const position = section.getBoundingClientRect();
+        if (position.top < ratioForActive && position.bottom > ratioForActive && section !== activeSection) {
+            setActiveSection(section);
+            setActiveNav(document.querySelector(`#nav-${section.id}`));
+            break;
+        }
+    }
+}
+
+// Removes active-section class from previous active section, adds the class to 
+// new active section.
+function setActiveSection(section) {
+    activeSection.classList.remove('active-section');
+    section.classList.add('active-section');
+    activeSection = section;
+}
+
+// Removes active-nav class from previous active navigation button, adds the 
+// class to new active navigation button.
+function setActiveNav(nav) {
+    activeNav.classList.remove('active-nav');
+    nav.classList.add('active-nav')
+    activeNav = nav;
+}
+
+
+/**
+ * Execute the program
+ * 
+*/
+
+// Call the function to start the whole code
+initialSetup();
